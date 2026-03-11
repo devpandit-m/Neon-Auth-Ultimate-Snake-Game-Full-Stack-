@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animated Neon Form</title>
+    <link rel="stylesheet" href="style001.css">
+</head>
+<body>
+
+    <div class="login-box">
+    <span></span><span></span><span></span><span></span>
+
+    <!-- 1. LOGIN FORM -->
+    
+		<div id="login-form">
+	<h2>
+        <span></span><span></span><span></span><span></span>
+        Login
+    </h2>
+			<form id="loginFormObj" onsubmit="return false;">
+				<div class="user-box">
+					<input type="text" id="loginUser" required="">
+					<label>Username</label>
+				</div>
+				<div class="user-box">
+					<!-- Password input with a toggle link -->
+					<input type="password" id="loginPass" required="">
+					<label>Password</label>
+					<a href="javascript:void(0)" onclick="togglePasswordVisibility()" id="toggleBtn" 
+					   style="position: absolute; right: 0; top: 10px; color: #03e9f4; font-size: 12px; text-decoration: none;">SHOW</a>
+				</div>
+				<button type="button" onclick="checkLogin()">Submit</button>
+				<div class="form-footer">
+					<a onclick="toggleForm('forget-form')">Forgot Password?</a>
+					<p>New user? <a onclick="toggleForm('signup-form')">Sign Up</a></p>
+				</div>
+			</form>
+		</div>
+
+    <!-- 2. SIGN UP FORM -->
+    <div id="signup-form" style="display:none;">
+        <h2>
+			<span></span><span></span><span></span><span></span>
+			Sign Up 
+		</h2>
+        <form id="signUpFormObj" onsubmit="return false;">
+            <div class="user-box"><input type="text" required=""><label>Full Name</label></div>
+            <div class="user-box"><input type="email" required=""><label>Email</label></div>
+            <div class="user-box"><input type="password" required=""><label>Password</label></div>
+            <!-- handleAction function ab form data ko reset bhi karega -->
+            <button type="button" onclick="handleAction('Registration Successful!', 'signUpFormObj', 'login-form')">Register</button>
+            <div class="form-footer">
+                <p>Already a member? <a onclick="toggleForm('login-form')">Login</a></p>
+            </div>
+        </form>
+    </div>
+			<!-- 3. FORGET PASSWORD FORM -->
+				<div id="forget-form" style="display:none;">
+					<h2>
+						<span></span><span></span><span></span><span></span>
+						Reset
+					</h2>
+					<form id="forgetFormObj" onsubmit="return false;">
+						<div class="user-box">
+							<input type="email" id="resetEmail" required="">
+							<label>Enter Registered Email</label>
+						</div>
+						
+						<button type="button" onclick="processForgetPassword()">Generate Password</button>
+						
+						<!-- Password Display Area with Copy Button -->
+						<div id="displayPassword" style="color: #25ff11; margin-top: 20px; font-size: 16px; text-align: center; display: none; border: 1px dashed #25ff11; padding: 15px;">
+							Your Password: <strong id="showPass"></strong>
+							<br><br>
+							<button type="button" onclick="copyPassword()" style="font-size: 12px; padding: 5px 10px; letter-spacing: 1px;">Copy Code</button>
+						</div>
+
+						<div class="form-footer">
+							<a onclick="toggleForm('login-form')">Back to Login</a>
+						</div>
+					</form>
+				</div>
+
+
+</div>
+
+<script>
+    // 1. FORM SWITCHING
+    function toggleForm(formId) {
+        const forms = ['login-form', 'signup-form', 'forget-form'];
+        forms.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.style.display = 'none';
+        });
+        document.getElementById(formId).style.display = 'block';
+        if(document.getElementById('displayPassword')) {
+            document.getElementById('displayPassword').style.display = 'none';
+        }
+    }
+
+    // 2. SIGN UP LOGIC (Local Memory mein save karega)
+    function handleAction(message, currentFormId, targetViewId) {
+        const name = document.querySelector('#signup-form input[type="text"]').value.trim();
+        const email = document.querySelector('#signup-form input[type="email"]').value.trim();
+        const pass = document.querySelector('#signup-form input[type="password"]').value.trim();
+
+        if(name === "" || email === "" || pass === "") {
+            alert("Please fill all fields!");
+            return;
+        }
+
+        localStorage.setItem('regUser', name);
+        localStorage.setItem('regEmail', email);
+        localStorage.setItem('regPass', pass);
+
+        alert("Registration Successful!");
+        document.getElementById(currentFormId).reset(); 
+        toggleForm(targetViewId);    
+    }
+
+    // 3. LOGIN VALIDATION (Python aur LocalStorage dono se connect)
+    function checkLogin() {
+        const user = document.getElementById('loginUser').value.trim();
+        const pass = document.getElementById('loginPass').value.trim();
+
+        const savedUser = localStorage.getItem('regUser');
+        const savedPass = localStorage.getItem('regPass');
+
+        // Sabse pehle check karein ki user registered hai ya nahi
+        if (user === savedUser && pass === savedPass) {
+            
+            // AGAR SAHI HAI: Toh Python (Flask) ko signal bhejo Game start karne ke liye
+            fetch('/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: user, password: pass })
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message); // Python se "Login Successful" message aayega
+                if(data.status === "success") {
+                    document.getElementById('loginFormObj').reset();
+                }
+            });
+
+        } else {
+            alert("Wrong Username or Password!");
+        }
+    }
+
+    // 4. FORGET PASSWORD
+    function processForgetPassword() {
+        const emailInput = document.getElementById('resetEmail').value.trim();
+        const savedEmail = localStorage.getItem('regEmail');
+
+        if (emailInput === "" || emailInput !== savedEmail) {
+            alert("Email not found!");
+            return;
+        }
+
+        const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let randomPass = "";
+        for (let i = 0; i < 8; i++) {
+            randomPass += charset.charAt(Math.floor(Math.random() * charset.length));
+        }
+
+        localStorage.setItem('regPass', randomPass);
+
+        const displayDiv = document.getElementById('displayPassword');
+        const passSpan = document.getElementById('showPass');
+        displayDiv.style.display = 'block';
+        passSpan.innerText = randomPass;
+    }
+
+    // 5. COPY & REDIRECT
+    function copyPassword() {
+        const passText = document.getElementById('showPass').innerText;
+        navigator.clipboard.writeText(passText).then(() => {
+            alert("New Password Copied! Use this to login now.");
+            document.getElementById('forgetFormObj').reset();
+            toggleForm('login-form');
+        });
+    }
+
+    // 6. SHOW/HIDE PASSWORD
+    function togglePasswordVisibility() {
+        const passInput = document.getElementById('loginPass');
+        const toggleBtn = document.getElementById('toggleBtn');
+        if (passInput.type === "password") {
+            passInput.type = "text";
+            toggleBtn.innerText = "HIDE";
+        } else {
+            passInput.type = "password";
+            toggleBtn.innerText = "SHOW";
+        }
+    }
+</script>
+
+
+
+
+
+
+
+</body>
+</html>
